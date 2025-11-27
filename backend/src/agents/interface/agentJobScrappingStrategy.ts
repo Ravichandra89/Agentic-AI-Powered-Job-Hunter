@@ -7,7 +7,7 @@
 import { SearchConfig } from "../../types/searchConfig.types";
 import { JobCard } from "../../types/job.types";
 
-export interface JobScappingStrategy {
-    source: string;
-    searchJobs(config: SearchConfig) : Promise<JobCard[]> ;
-};
+export interface JobScrappingStrategy {
+  source: string;
+  searchJobs(config: SearchConfig): Promise<JobCard[]>;
+}
