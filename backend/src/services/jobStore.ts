@@ -56,10 +56,16 @@ const convertIntoJobDocument = (job: JobDetails) => {
   };
 };
 
+
 export const saveJobs = async (
   jobs: JobDetails[]
 ): Promise<JobSaveResponse> => {
-  const result: JobSaveResponse = { saved: 0, duplicate: 0, errors: [] };
+  const result: JobSaveResponse = {
+    saved: 0,
+    duplicate: 0,
+    errors: [],
+    savedJobs: [], 
+  };
 
   for (const job of jobs) {
     try {
@@ -69,12 +75,15 @@ export const saveJobs = async (
         log.info(
           `Duplicate: ${job.jobId ?? job.jobUrl} (${job.source}) — skipped`
         );
-        result.duplicate += 1;
+        result.duplicate++;
         continue;
       }
 
+      // Store job in DB
       await JobModel.create(convertIntoJobDocument(job));
-      result.saved += 1;
+
+      result.saved++;
+      result.savedJobs!.push(job); 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       log.error(`Failed to save job ${job.jobId ?? job.jobUrl}: ${message}`);
@@ -84,6 +93,9 @@ export const saveJobs = async (
 
   if (result.errors?.length === 0) {
     delete result.errors;
+  }
+  if (result.savedJobs?.length === 0) {
+    delete result.savedJobs;
   }
 
   return result;

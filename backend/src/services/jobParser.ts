@@ -1,12 +1,14 @@
-import { load } from "cheerio";
+import {
+  loadHtml,
+  cleanHtml,
+  matchRegex,
+  CheerioAPI,
+} from "../core/utils/parser";
 import { JobDetails } from "../types/job.types";
 import { RawHTMLResponse } from "../types/common.types";
 
-
-type CheerioAPI = ReturnType<typeof load>;
-
 /**
- * Extract job title from page
+ * Extract job title
  */
 const extractTitle = ($: CheerioAPI): string =>
   $("h1").first().text().trim() ||
@@ -14,7 +16,7 @@ const extractTitle = ($: CheerioAPI): string =>
   "";
 
 /**
- * Extract company name from page
+ * Extract company name
  */
 const extractCompanyName = ($: CheerioAPI): string =>
   $("[data-company-name]").text().trim() ||
@@ -22,16 +24,7 @@ const extractCompanyName = ($: CheerioAPI): string =>
   "";
 
 /**
- * Clean HTML string -> plain text
- */
-const cleanHtml = (html: string): string =>
-  html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-/**
- * Extract job description
+ * Extract job description block
  */
 const extractDescription = ($: CheerioAPI): string => {
   const selectors = [
@@ -80,16 +73,14 @@ const extractSkills = (html: string): string[] => {
   const lower = html.toLowerCase();
 
   knownSkills.forEach((skill) => {
-    if (lower.includes(skill.toLowerCase())) {
-      found.add(skill);
-    }
+    if (lower.includes(skill)) found.add(skill);
   });
 
   return [...found];
 };
 
 /**
- * Extract job ID from URL
+ * Extract job ID from a job URL
  */
 const extractJobId = (url: string): string | undefined => {
   const linkedin = url.match(/\/jobs\/view\/(\d+)/);
@@ -102,49 +93,37 @@ const extractJobId = (url: string): string | undefined => {
 };
 
 /**
- * Detect job source from URL
+ * Detect job source
  */
 const detectSource = (url: string): "linkedin" | "wellfound" =>
   url.includes("linkedin.com")
     ? "linkedin"
-    : url.includes("angel.co") || url.includes("wellfound.com")
+    : url.includes("wellfound.com") || url.includes("angel.co")
     ? "wellfound"
     : "linkedin";
 
 /**
- * Helper to match regex
+ * Extract meta values like salary & employment type
  */
-const matchRegex = (html: string, regex: RegExp): string | undefined => {
-  const m = html.match(regex);
-  return m ? m[0] : undefined;
-};
-
-/**
- * Extract metadata like salary, employment type, seniority
- */
-const extractMetadata = (html: string) => {
-  const salary =
+const extractMetadata = (html: string) => ({
+  salary:
     matchRegex(html, /(₹[\d,]+\s?[-–]\s?₹[\d,]+)/) ||
-    matchRegex(html, /\$[\d,]+/);
-
-  const employmentType = matchRegex(
+    matchRegex(html, /\$[\d,]+/),
+  employmentType: matchRegex(
     html,
     /(full[- ]?time|part[- ]?time|contract|internship)/i
-  );
-
-  const seniorityLevel = matchRegex(
+  ),
+  seniorityLevel: matchRegex(
     html,
     /(entry[- ]?level|junior|mid[- ]?level|senior|lead|manager)/i
-  );
-
-  return { salary, employmentType, seniorityLevel };
-};
+  ),
+});
 
 /**
- * Main function: parse job 
+ * MAIN PARSER FUNCTION
  */
 export const parseJob = (raw: RawHTMLResponse): JobDetails => {
-  const $: CheerioAPI = load(raw.html);
+  const $ = loadHtml(raw.html);
 
   const description = extractDescription($);
   const meta = extractMetadata(raw.html);

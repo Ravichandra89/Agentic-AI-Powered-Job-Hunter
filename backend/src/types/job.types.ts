@@ -5,7 +5,7 @@ export interface JobCard {
   location?: string;
   jobUrl: string;
   jobId?: string;
-  source: "linkedin" | "wellfound";
+  source: "linkedin" | "wellfound" | "yc";
 }
 
 export interface JobDetails extends JobCard {
@@ -26,4 +26,11 @@ export interface JobSaveResponse {
   saved: number;
   duplicate: number;
   errors?: string[];
+}
+
+export interface JobSaveResponse {
+  saved: number;
+  duplicate: number;
+  errors?: string[];
+  savedJobs?: JobDetails[];
 }
